@@ -114,7 +114,7 @@ def add_video_keyframe_impl(
     except exceptions.TrackNotFound:
         raise Exception(f"Track named {track_name} not found")
     except Exception as e:
-        raise Exception(f"Failed to add keyframe: {str(e)}")
+        raise Exception("Failed to add keyframe. Check server logs.")
 
 
 def _add_single_keyframe(track, property_type: str, time: float, value: str):

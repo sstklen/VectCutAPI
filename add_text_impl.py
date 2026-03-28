@@ -12,7 +12,7 @@ def add_text_impl(
     text: str,
     start: float,
     end: float,
-    draft_id: str | None = None,  # Python 3.10+ 新语法
+    draft_id: Optional[str] = None,  # Python 3.10+ 新语法
     transform_y: float = -0.8,
     transform_x: float = 0,
     font: Optional[str] = None,
@@ -42,13 +42,13 @@ def add_text_impl(
     shadow_distance: float = 5.0,
     shadow_smoothing: float = 0.15,
     # Bubble effect
-    bubble_effect_id: str | None = None,
-    bubble_resource_id: str | None = None,
+    bubble_effect_id: Optional[str] = None,
+    bubble_resource_id: Optional[str] = None,
     # Text effect
-    effect_effect_id: str | None = None,
-    intro_animation: str | None = None,
+    effect_effect_id: Optional[str] = None,
+    intro_animation: Optional[str] = None,
     intro_duration: float = 0.5,
-    outro_animation: str | None = None,
+    outro_animation: Optional[str] = None,
     outro_duration: float = 0.5,
     width: int = 1080,
     height: int = 1920,

@@ -86,14 +86,16 @@ def save_draft_background(draft_id, draft_folder, task_id):
         if draft_folder:
             draft_folder = _safe_draft_folder(draft_folder)
 
-        # Delete possibly existing draft_id folder
-        if os.path.exists(draft_id):
-            logger.warning(f"Deleting existing draft folder (current working directory): {draft_id}")
-            shutil.rmtree(draft_id)
+        # 固定安全根目錄：只在程式所在目錄下操作，禁止裸 draft_id rmtree
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        safe_draft_path = os.path.join(current_dir, draft_id)
+        if os.path.exists(safe_draft_path):
+            # 雙重確認：解析後仍在 current_dir 下
+            if os.path.realpath(safe_draft_path).startswith(current_dir + os.sep):
+                logger.warning(f"Deleting existing draft folder: {safe_draft_path}")
+                shutil.rmtree(safe_draft_path)
 
         logger.info(f"Starting to save draft: {draft_id}")
-        # Save draft
-        current_dir = os.path.dirname(os.path.abspath(__file__))
         draft_folder_for_duplicate = draft.Draft_folder(current_dir)
         # Choose different template directory based on configuration
         template_dir = "template" if IS_CAPCUT_ENV else "template_jianying"
@@ -258,10 +260,10 @@ def save_draft_background(draft_id, draft_folder, task_id):
 
     except Exception as e:
         # Update task status - Failed
-        update_task_fields(task_id, 
+        update_task_fields(task_id,
                           status="failed",
-                          message=f"Failed to save draft: {str(e)}")
-        logger.error(f"Saving draft {draft_id} task {task_id} failed: {str(e)}", exc_info=True)
+                          message="Failed to save draft. Check server logs.")
+        logger.error(f"Saving draft {draft_id} task {task_id} failed: {e}", exc_info=True)
         return ""
 
 def query_task_status(task_id: str):
@@ -290,10 +292,10 @@ def save_draft_impl(draft_id: str, draft_folder: str = None) -> Dict[str, str]:
         # thread.start()
         
     except Exception as e:
-        logger.error(f"Failed to start save draft task {draft_id}: {str(e)}", exc_info=True)
+        logger.error(f"Failed to start save draft task {draft_id}: {e}", exc_info=True)
         return {
             "success": False,
-            "error": str(e)
+            "error": "Failed to start save draft task. Check server logs."
         }
 
 def update_media_metadata(script, task_id=None):
@@ -710,10 +712,10 @@ def download_script(draft_id: str, draft_folder: str = None, script_data: Dict =
 
     except requests.exceptions.RequestException as e:
         logger.error(f"API request failed: {e}", exc_info=True)
-        return {"success": False, "error": f"Failed to fetch script from API: {str(e)}"}
+        return {"success": False, "error": "Failed to fetch script. Check server logs."}
     except Exception as e:
         logger.error(f"Unexpected error during download: {e}", exc_info=True)
-        return {"success": False, "error": f"An unexpected error occurred: {str(e)}"}
+        return {"success": False, "error": "An unexpected error occurred. Check server logs."}
 
 if __name__ == "__main__":
     print('hello')

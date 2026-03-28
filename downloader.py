@@ -69,8 +69,9 @@ def _resolve_and_check_ip(hostname: str, port: int = 443) -> None:
         for family, type_, proto, canonname, sockaddr in addrinfos:
             raw_ip = sockaddr[0]
             ip = ipaddress.ip_address(raw_ip)
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-                raise ValueError(f"域名 {hostname} 解析到內網地址 {ip}")
+            # 只允許 global unicast（is_global 不擋 multicast，需額外檢查）
+            if not ip.is_global or ip.is_multicast:
+                raise ValueError(f"域名 {hostname} 解析到非公網地址 {ip}")
     except socket.gaierror:
         raise ValueError(f"域名 {hostname} DNS 解析失敗，拒絕存取")
 
@@ -117,8 +118,8 @@ def _validate_url(url: str) -> str:
         # 域名：做 DNS 預解析防 rebinding（失敗也拒絕）
         _resolve_and_check_ip(hostname, parsed.port or 443)
     else:
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-            raise ValueError(f"禁止存取內網/保留地址: {url}")
+        if not ip.is_global or ip.is_multicast:
+            raise ValueError(f"禁止存取非公網地址: {url}")
 
     return url
 
