@@ -1,5 +1,6 @@
 import os
 import pyJianYingDraft as draft
+from util import safe_getattr
 import time
 from settings.local import IS_CAPCUT_ENV
 from util import generate_draft_url, is_windows_path, url_to_hash
@@ -177,9 +178,9 @@ def add_video_track(
         try:
             # Get transition type
             if IS_CAPCUT_ENV:
-                transition_type = getattr(draft.CapCut_Transition_type, transition)
+                transition_type = safe_safe_getattr(draft.CapCut_Transition_type, transition)
             else:
-                transition_type = getattr(draft.Transition_type, transition)
+                transition_type = safe_getattr(draft.Transition_type, transition)
             
             # Set transition duration (convert to microseconds)
             duration_microseconds = int(transition_duration * 1e6)
@@ -193,9 +194,9 @@ def add_video_track(
     if mask_type:
         try:
             if IS_CAPCUT_ENV:
-                mask_type_enum = getattr(draft.CapCut_Mask_type, mask_type)
+                mask_type_enum = safe_safe_getattr(draft.CapCut_Mask_type, mask_type)
             else:
-                mask_type_enum = getattr(draft.Mask_type, mask_type)
+                mask_type_enum = safe_getattr(draft.Mask_type, mask_type)
             video_segment.add_mask(
                 script,
                 mask_type_enum,

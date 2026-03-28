@@ -1,4 +1,5 @@
 import pyJianYingDraft as draft
+from util import safe_getattr
 from pyJianYingDraft import exceptions
 from create_draft import get_or_create_draft
 from typing import Optional, Dict, List
@@ -122,7 +123,7 @@ def _add_single_keyframe(track, property_type: str, time: float, value: str):
     """
     # Convert property type string to enum value, validate if property type is valid
     try:
-        property_enum = getattr(draft.Keyframe_property, property_type)
+        property_enum = safe_getattr(draft.Keyframe_property, property_type)
     except:
         raise Exception(f"Unsupported keyframe property type: {property_type}")
         

@@ -1,7 +1,16 @@
 import os
+import logging
 import requests
 from flask import Flask, request, jsonify, Response
 from datetime import datetime
+
+# 錯誤訊息不回傳 str(e)，只寫 log（防路徑洩漏）
+_logger = logging.getLogger('capcut_server')
+
+def _safe_error(context: str, e: Exception) -> str:
+    """回傳通用錯誤訊息，詳細錯誤只寫 log"""
+    _logger.error(f"{context}: {e}", exc_info=True)
+    return f"Error occurred while {context}. Check server logs for details."
 import pyJianYingDraft as draft
 from pyJianYingDraft.metadata.animation_meta import Intro_type, Outro_type, Group_animation_type
 from pyJianYingDraft.metadata.capcut_animation_meta import CapCut_Intro_type, CapCut_Outro_type, CapCut_Group_animation_type
@@ -141,7 +150,7 @@ def add_video():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while processing video: {str(e)}."
+        error_message = _safe_error("processing video", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -206,7 +215,7 @@ def add_audio():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while processing audio: {str(e)}."
+        error_message = _safe_error("processing audio", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -236,7 +245,7 @@ def create_draft_service():
         return jsonify(result)
         
     except Exception as e:
-        error_message = f"Error occurred while creating draft: {str(e)}."
+        error_message = _safe_error("creating draft", e)
         result["error"] = error_message
         return jsonify(result)
         
@@ -327,7 +336,7 @@ def add_subtitle():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while processing subtitle: {str(e)}."
+        error_message = _safe_error("processing subtitle", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -501,7 +510,7 @@ def add_text():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while processing text: {str(e)}. You can click the link below for help: "
+        error_message = _safe_error("processing text", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -602,7 +611,7 @@ def add_image():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while processing image: {str(e)}."
+        error_message = _safe_error("processing image", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -648,7 +657,7 @@ def add_video_keyframe():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while adding keyframe: {str(e)}."
+        error_message = _safe_error("adding keyframe", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -698,7 +707,7 @@ def add_effect():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while adding effect: {str(e)}. "
+        error_message = _safe_error("adding effect", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -739,7 +748,7 @@ def query_script():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while querying script: {str(e)}. "
+        error_message = _safe_error("querying script", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -772,7 +781,7 @@ def save_draft():
         return jsonify(result)
         
     except Exception as e:
-        error_message = f"Error occurred while saving draft: {str(e)}. "
+        error_message = _safe_error("saving draft", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -810,7 +819,7 @@ def query_draft_status():
         return jsonify(result)
         
     except Exception as e:
-        error_message = f"Error occurred while querying task status: {str(e)}."
+        error_message = _safe_error("querying task status", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -842,7 +851,7 @@ def generate_draft_url():
         return jsonify(result)
         
     except Exception as e:
-        error_message = f"Error occurred while saving draft: {str(e)}."
+        error_message = _safe_error("saving draft", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -905,7 +914,7 @@ def add_sticker():
         return jsonify(result)
 
     except Exception as e:
-        error_message = f"Error occurred while adding sticker: {str(e)}. "
+        error_message = _safe_error("adding sticker", e)
         result["error"] = error_message
         return jsonify(result)
 
@@ -943,7 +952,7 @@ def get_intro_animation_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting entrance animation types: {str(e)}"
+        result["error"] = _safe_error("getting entrance animation types", e)
         return jsonify(result)
         
 @app.route('/get_outro_animation_types', methods=['GET'])
@@ -980,7 +989,7 @@ def get_outro_animation_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting exit animation types: {str(e)}"
+        result["error"] = _safe_error("getting exit animation types", e)
         return jsonify(result)
 
 
@@ -1018,7 +1027,7 @@ def get_combo_animation_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting combo animation types: {str(e)}"
+        result["error"] = _safe_error("getting combo animation types", e)
         return jsonify(result)
 
 
@@ -1056,7 +1065,7 @@ def get_transition_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting transition animation types: {str(e)}"
+        result["error"] = _safe_error("getting transition animation types", e)
         return jsonify(result)
 
 
@@ -1094,7 +1103,7 @@ def get_mask_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting mask types: {str(e)}"
+        result["error"] = _safe_error("getting mask types", e)
         return jsonify(result)
 
 
@@ -1226,7 +1235,7 @@ def get_audio_effect_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting audio effect types: {str(e)}"
+        result["error"] = _safe_error("getting audio effect types", e)
         return jsonify(result)
 
 
@@ -1256,7 +1265,7 @@ def get_font_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting font types: {str(e)}"
+        result["error"] = _safe_error("getting font types", e)
         return jsonify(result)
 
 
@@ -1294,7 +1303,7 @@ def get_text_intro_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting text entrance animation types: {str(e)}"
+        result["error"] = _safe_error("getting text entrance animation types", e)
         return jsonify(result)
 
 @app.route('/get_text_outro_types', methods=['GET'])
@@ -1331,7 +1340,7 @@ def get_text_outro_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting text exit animation types: {str(e)}"
+        result["error"] = _safe_error("getting text exit animation types", e)
         return jsonify(result)
 
 @app.route('/get_text_loop_anim_types', methods=['GET'])
@@ -1368,7 +1377,7 @@ def get_text_loop_anim_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting text loop animation types: {str(e)}"
+        result["error"] = _safe_error("getting text loop animation types", e)
         return jsonify(result)
 
 
@@ -1406,7 +1415,7 @@ def get_video_scene_effect_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting scene effect types: {str(e)}"
+        result["error"] = _safe_error("getting scene effect types", e)
         return jsonify(result)
 
 
@@ -1444,7 +1453,7 @@ def get_video_character_effect_types():
     
     except Exception as e:
         result["success"] = False
-        result["error"] = f"Error occurred while getting character effect types: {str(e)}"
+        result["error"] = _safe_error("getting character effect types", e)
         return jsonify(result)
 
 

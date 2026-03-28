@@ -1,4 +1,5 @@
 import pyJianYingDraft as draft
+from util import safe_getattr
 from settings.local import IS_CAPCUT_ENV
 from util import generate_draft_url, hex_to_rgb
 from pyJianYingDraft import trange, Font_type
@@ -106,7 +107,7 @@ def add_text_impl(
         font_type = None
     else:
         try:
-            font_type = getattr(Font_type, font)
+            font_type = safe_getattr(Font_type, font)
         except:
             available_fonts = [attr for attr in dir(Font_type) if not attr.startswith('_')]
             raise ValueError(f"Unsupported font: {font}, please use one of the fonts in Font_type: {available_fonts}")
@@ -241,9 +242,9 @@ def add_text_impl(
     if intro_animation:
         try:
             if IS_CAPCUT_ENV:
-                animation_type = getattr(draft.CapCut_Text_intro, intro_animation)
+                animation_type = safe_getattr(draft.CapCut_Text_intro, intro_animation)
             else:
-                animation_type = getattr(draft.Text_intro, intro_animation)
+                animation_type = safe_getattr(draft.Text_intro, intro_animation)
             # Convert seconds to microseconds
             duration_microseconds = int(intro_duration * 1000000)
             text_segment.add_animation(animation_type, duration_microseconds)  # Add intro animation, set duration
@@ -254,9 +255,9 @@ def add_text_impl(
     if outro_animation:
         try:
             if IS_CAPCUT_ENV:
-                animation_type = getattr(draft.CapCut_Text_outro, outro_animation)
+                animation_type = safe_getattr(draft.CapCut_Text_outro, outro_animation)
             else:
-                animation_type = getattr(draft.Text_outro, outro_animation)
+                animation_type = safe_getattr(draft.Text_outro, outro_animation)
             # Convert seconds to microseconds
             duration_microseconds = int(outro_duration * 1000000)
             text_segment.add_animation(animation_type, duration_microseconds)  # Add outro animation, set duration

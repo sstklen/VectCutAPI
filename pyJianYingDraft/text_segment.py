@@ -13,6 +13,9 @@ from .time_util import Timerange, tim
 from .segment import Clip_settings, Visual_segment
 from .animation import Segment_animations, Text_animation
 
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from util import safe_getattr
 from .metadata import Font_type, Effect_meta
 from .metadata import Text_intro, Text_outro, Text_loop_anim
 
@@ -275,7 +278,7 @@ class TextStyleRange:
         self.border = border
         if font_str:
             try:
-                font_type = getattr(Font_type, font_str).value
+                font_type = safe_getattr(Font_type, font_str).value
             except:
                 available_fonts = [attr for attr in dir(Font_type) if not attr.startswith('_')]
                 raise ValueError(f"不支持的字体：{font_str}，请使用Font_type中的字体之一：{available_fonts}")

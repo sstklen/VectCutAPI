@@ -130,7 +130,7 @@ class Track(Base_track, Generic[Seg_type]):
                     continue
                     
                 # 将属性类型字符串转换为枚举值
-                property_enum = getattr(draft.Keyframe_property, property_type)
+                property_enum = safe_getattr(draft.Keyframe_property, property_type)
                     
                 # 解析value值
                 if property_type == 'alpha' and value.endswith('%'):
