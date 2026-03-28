@@ -1,11 +1,13 @@
-# 依賴版本已鎖定（含間接依賴的安全升版）
+# 依賴版本已鎖定（相容 Python 3.9+）
 # oss2 已移除（不上傳任何雲端）
+# 已知限制：requests GHSA-gc5v + pillow GHSA-cfh3 修復版需 Python 3.10+
+# 升級到 Python 3.10+ 後改為 requests>=2.33.0 + pillow>=12.1.1
 imageio>=2.37.2,<3.0
 psutil>=7.0.0,<8.0
 flask>=3.1.3,<4.0
-requests>=2.33.0,<3.0
+requests>=2.32.4,<3.0
 json5>=0.12.0,<1.0
-# 間接依賴安全升版（pip install 時自動拉到正確版本）
-pillow>=12.1.1
-urllib3>=2.6.3
-werkzeug>=3.1.6
+# 間接依賴安全升版
+pillow>=11.3.0,<12.0
+urllib3>=2.6.3,<3.0
+werkzeug>=3.1.6,<4.0
