@@ -82,8 +82,9 @@ def save_draft_background(draft_id, draft_folder, task_id):
         update_tasks_cache(task_id, task_status)  # Use new cache management function
         logger.info(f"Task {task_id} status updated to 'processing': Preparing draft files.")
         
-        # 驗證 draft_id 格式，防止 shutil.rmtree 刪除任意目錄
         draft_id = _safe_draft_id(draft_id)
+        if draft_folder:
+            draft_folder = _safe_draft_folder(draft_folder)
 
         # Delete possibly existing draft_id folder
         if os.path.exists(draft_id):
@@ -243,7 +244,7 @@ def save_draft_background(draft_id, draft_folder, task_id):
             # Clean up temporary files
             # [WASHIN-SECURITY] draft_id 已在前面驗證過
             safe_cleanup_path = os.path.join(current_dir, draft_id)
-            if os.path.exists(safe_cleanup_path) and current_dir in os.path.realpath(safe_cleanup_path):
+            if os.path.exists(safe_cleanup_path) and os.path.realpath(safe_cleanup_path).startswith(current_dir):
                 shutil.rmtree(safe_cleanup_path)
                 logger.info(f"Cleaned up temporary draft folder: {os.path.join(current_dir, draft_id)}")
 

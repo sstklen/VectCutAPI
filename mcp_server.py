@@ -316,7 +316,7 @@ _TOOL_ALLOWED_PARAMS = {
     "add_video_keyframe": {"draft_id", "track_name", "property_type", "time", "value",
                            "property_types", "times", "values"},
     "get_video_duration": {"video_url"},
-    "save_draft": {"draft_id", "draft_folder", "script_data"},
+    "save_draft": {"draft_id", "draft_folder"},
 }
 
 

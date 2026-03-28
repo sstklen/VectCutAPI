@@ -14,14 +14,23 @@ from urllib.parse import urlparse, unquote
 # ============================================================
 
 def _safe_material_name(material_name: str) -> str:
-    """防止路徑穿越攻擊：移除 .. 和絕對路徑"""
+    """防止路徑穿越、null byte、ffmpeg 選項注入、超長檔名"""
     if not material_name:
-        raise ValueError("[WASHIN-SECURITY] material_name 不可為空")
+        raise ValueError("material_name 不可為空")
+    if '\x00' in material_name:
+        raise ValueError("material_name 包含 null byte")
     if '..' in material_name:
-        raise ValueError(f"[WASHIN-SECURITY] material_name 包含 '..'，疑似路徑穿越攻擊: {material_name}")
+        raise ValueError(f"material_name 包含 '..'，疑似路徑穿越: {material_name}")
     if material_name.startswith('/') or material_name.startswith('\\'):
-        raise ValueError(f"[WASHIN-SECURITY] material_name 不可為絕對路徑: {material_name}")
-    return os.path.basename(material_name)
+        raise ValueError(f"material_name 不可為絕對路徑: {material_name}")
+    basename = os.path.basename(material_name)
+    # 防止被 ffmpeg 當成選項（-i, -f 等）
+    if basename.startswith('-'):
+        raise ValueError(f"material_name 不可以 '-' 開頭: {basename}")
+    # 檔名長度限制（macOS/Linux 上限 255 bytes）
+    if len(basename.encode('utf-8')) > 255:
+        raise ValueError(f"material_name 超長（UTF-8 > 255 bytes）")
+    return basename
 
 
 def _safe_draft_id(draft_id: str) -> str:
@@ -32,8 +41,8 @@ def _safe_draft_id(draft_id: str) -> str:
         raise ValueError(f"draft_id 超長（{len(draft_id)} 字元，上限 128）")
     if '..' in draft_id or '/' in draft_id or '\\' in draft_id:
         raise ValueError(f"draft_id 含非法字元: {draft_id}")
-    # ASCII only：字母、數字、底線、連字號（排除 Unicode 字母）
-    if not re.match(r'^[a-zA-Z0-9_\-]+$', draft_id):
+    # ASCII only + fullmatch 更嚴格
+    if not re.fullmatch(r'[a-zA-Z0-9_\-]+', draft_id):
         raise ValueError(f"draft_id 格式不合法: {draft_id}")
     return draft_id
 
@@ -45,8 +54,8 @@ def _safe_draft_folder(draft_folder: str) -> str:
     if '..' in draft_folder:
         raise ValueError(f"draft_folder 不可包含 '..': {draft_folder}")
     resolved = os.path.realpath(draft_folder)
-    # symlink 解析後必須仍在 /Users/ 或 /tmp/ 下（防 symlink 逃逸）
-    ALLOWED_PREFIXES = ('/Users/', '/tmp/', '/home/')
+    # macOS: /tmp → /private/tmp，兩者都要允許
+    ALLOWED_PREFIXES = ('/Users/', '/private/tmp/', '/tmp/', '/home/')
     if not any(resolved.startswith(p) for p in ALLOWED_PREFIXES):
         raise ValueError(f"draft_folder 解析後超出安全範圍: {resolved}")
     return resolved
@@ -58,23 +67,34 @@ def _resolve_and_check_ip(hostname: str, port: int = 443) -> None:
     try:
         addrinfos = socket.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
         for family, type_, proto, canonname, sockaddr in addrinfos:
-            ip = ipaddress.ip_address(sockaddr[0])
+            raw_ip = sockaddr[0]
+            ip = ipaddress.ip_address(raw_ip)
             if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
                 raise ValueError(f"域名 {hostname} 解析到內網地址 {ip}")
     except socket.gaierror:
-        pass  # DNS 解析失敗，後續 ffmpeg/requests 也會失敗
+        raise ValueError(f"域名 {hostname} DNS 解析失敗，拒絕存取")
 
 
 def _validate_url(url: str) -> str:
     """驗證 URL 安全性：禁止內網、敏感路徑、非 http(s) 協定、DNS rebinding"""
     if not url:
         raise ValueError("URL 不可為空")
+    if '\x00' in url:
+        raise ValueError("URL 包含 null byte")
+    if len(url) > 4096:
+        raise ValueError("URL 超長（> 4096）")
+
+    # 拒絕前導空白（CVE-2023-24329 繞過防護）
+    stripped = url.strip()
+    if stripped != url:
+        raise ValueError(f"URL 包含前導/尾隨空白: {repr(url[:30])}")
 
     # 本地檔案路徑
     if os.path.isfile(url):
         sensitive = ['.ssh', '.env', '.gnupg', 'passwd', '.aws', 'shadow',
                      '.config/claude', '.config/gh', 'id_rsa', 'credentials',
-                     '.bash_history', '.zsh_history', '.gitconfig']
+                     '.bash_history', '.zsh_history', '.gitconfig', 'known_hosts',
+                     '.netrc', '.pgpass', 'token', 'secret']
         for s in sensitive:
             if s in url.lower():
                 raise ValueError(f"禁止存取敏感路徑: {url}")
@@ -94,7 +114,7 @@ def _validate_url(url: str) -> str:
     try:
         ip = ipaddress.ip_address(hostname)
     except ValueError:
-        # 域名：做 DNS 預解析防 rebinding
+        # 域名：做 DNS 預解析防 rebinding（失敗也拒絕）
         _resolve_and_check_ip(hostname, parsed.port or 443)
     else:
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
@@ -125,11 +145,12 @@ def download_video(video_url, draft_name, material_name):
         return local_path
 
     try:
-        # Use ffmpeg to download video
+        # Use ffmpeg to download video（禁止 ffmpeg 內部跟隨 redirect，防 SSRF）
         command = [
             'ffmpeg',
+            '-max_redirect', '0',
             '-i', video_url,
-            '-c', 'copy',  # Direct copy, no re-encoding
+            '-c', 'copy',
             local_path
         ]
         subprocess.run(command, check=True, capture_output=True)
@@ -158,9 +179,9 @@ def download_image(image_url, draft_name, material_name):
         return local_path
     
     try:
-        # Use ffmpeg to download and convert image to PNG format
         command = [
             'ffmpeg',
+            '-max_redirect', '0',
             '-headers', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36\r\nReferer: https://www.163.com/\r\n',
             '-i', image_url,
             '-vf', 'format=rgba',  # Convert to RGBA format to support transparency
@@ -197,8 +218,9 @@ def download_audio(audio_url, draft_name, material_name):
         # Use ffmpeg to download and transcode to MP3 (key modification: specify MP3 encoder)
         command = [
             'ffmpeg',
-            '-i', audio_url,          # Input URL
-            '-c:a', 'libmp3lame',     # Force encode audio stream to MP3
+            '-max_redirect', '0',
+            '-i', audio_url,
+            '-c:a', 'libmp3lame',
             '-q:a', '2',              # Set audio quality (0-9, 0 is best, 2 balances quality and file size)
             '-y',                     # Overwrite existing files (optional)
             local_path                # Output path
