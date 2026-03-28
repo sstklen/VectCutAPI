@@ -76,11 +76,18 @@ def add_subtitle_impl(
     # Check if it's a URL
     if srt_path.startswith(('http://', 'https://')):
         try:
-            response = requests.get(srt_path)
+            response = requests.get(srt_path, allow_redirects=False, timeout=30)
+            # 防 SSRF：如果是 redirect，驗證目標
+            if response.status_code in (301, 302, 303, 307, 308):
+                redirect_url = response.headers.get('Location', '')
+                _validate_url(redirect_url)
+                response = requests.get(redirect_url, allow_redirects=False, timeout=30)
             response.raise_for_status()
 
             response.encoding = 'utf-8'
             srt_content = response.text
+        except ValueError as e:
+            raise Exception(f"字幕 URL 安全驗證失敗: {e}")
         except Exception as e:
             raise Exception(f"Failed to download subtitle file: {str(e)}")
     elif os.path.isfile(srt_path):  # Check if it's a file

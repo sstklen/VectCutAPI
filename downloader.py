@@ -148,7 +148,7 @@ def download_video(video_url, draft_name, material_name):
         # Use ffmpeg to download video（禁止 ffmpeg 內部跟隨 redirect，防 SSRF）
         command = [
             'ffmpeg',
-            '-max_redirect', '0',
+            '-max_redirects', '0',
             '-i', video_url,
             '-c', 'copy',
             local_path
@@ -181,7 +181,7 @@ def download_image(image_url, draft_name, material_name):
     try:
         command = [
             'ffmpeg',
-            '-max_redirect', '0',
+            '-max_redirects', '0',
             '-headers', 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36\r\nReferer: https://www.163.com/\r\n',
             '-i', image_url,
             '-vf', 'format=rgba',  # Convert to RGBA format to support transparency
@@ -218,7 +218,7 @@ def download_audio(audio_url, draft_name, material_name):
         # Use ffmpeg to download and transcode to MP3 (key modification: specify MP3 encoder)
         command = [
             'ffmpeg',
-            '-max_redirect', '0',
+            '-max_redirects', '0',
             '-i', audio_url,
             '-c:a', 'libmp3lame',
             '-q:a', '2',              # Set audio quality (0-9, 0 is best, 2 balances quality and file size)
