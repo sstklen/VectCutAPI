@@ -7,6 +7,9 @@ from typing import TypeVar, Generic, Type
 from typing import Dict, List, Any, Union
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from util import safe_getattr
 import pyJianYingDraft as draft
 
 from .exceptions import SegmentOverlap

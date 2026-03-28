@@ -162,7 +162,7 @@ def add_image_impl(
     if intro_anim:
         try:
             if IS_CAPCUT_ENV:
-                animation_type = safe_safe_getattr(draft.CapCut_Intro_type, intro_anim)
+                animation_type = safe_getattr(draft.CapCut_Intro_type, intro_anim)
             else:
                 animation_type = safe_getattr(draft.Intro_type, intro_anim)
             image_segment.add_animation(animation_type, intro_animation_duration * 1e6)  # Use microsecond unit for animation duration
@@ -173,7 +173,7 @@ def add_image_impl(
     if outro_animation:
         try:
             if IS_CAPCUT_ENV:
-                outro_type = safe_safe_getattr(draft.CapCut_Outro_type, outro_animation)
+                outro_type = safe_getattr(draft.CapCut_Outro_type, outro_animation)
             else:
                 outro_type = safe_getattr(draft.Outro_type, outro_animation)
             image_segment.add_animation(outro_type, outro_animation_duration * 1e6)  # Use microsecond unit for animation duration
@@ -184,7 +184,7 @@ def add_image_impl(
     if combo_animation:
         try:
             if IS_CAPCUT_ENV:
-                combo_type = safe_safe_getattr(draft.CapCut_Group_animation_type, combo_animation)
+                combo_type = safe_getattr(draft.CapCut_Group_animation_type, combo_animation)
             else:
                 combo_type = safe_getattr(draft.Group_animation_type, combo_animation)
             image_segment.add_animation(combo_type, combo_animation_duration * 1e6)  # Use microsecond unit for animation duration
@@ -195,7 +195,7 @@ def add_image_impl(
     if transition:
         try:
             if IS_CAPCUT_ENV:
-                transition_type = safe_safe_getattr(draft.CapCut_Transition_type, transition)
+                transition_type = safe_getattr(draft.CapCut_Transition_type, transition)
             else:
                 transition_type = safe_getattr(draft.Transition_type, transition)
             # Convert seconds to microseconds (multiply by 1000000)
@@ -208,7 +208,7 @@ def add_image_impl(
     if mask_type:
         try:
             if IS_CAPCUT_ENV:
-                mask_type_enum = safe_safe_getattr(draft.CapCut_Mask_type, mask_type)
+                mask_type_enum = safe_getattr(draft.CapCut_Mask_type, mask_type)
             else:
                 mask_type_enum = safe_getattr(draft.Mask_type, mask_type)
             image_segment.add_mask(

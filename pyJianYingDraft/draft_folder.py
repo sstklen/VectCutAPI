@@ -48,7 +48,7 @@ class Draft_folder:
             raise ValueError(f"draft_name 含非法字元: {draft_name}")
         draft_path = os.path.join(self.folder_path, draft_name)
         # 確認解析後仍在 folder_path 下
-        if not os.path.realpath(draft_path).startswith(os.path.realpath(self.folder_path)):
+        if not os.path.realpath(draft_path).startswith(os.path.realpath(self.folder_path) + os.sep):
             raise ValueError(f"draft_path 超出安全範圍: {draft_path}")
         if not os.path.exists(draft_path):
             raise FileNotFoundError(f"草稿文件夹 {draft_name} 不存在")
