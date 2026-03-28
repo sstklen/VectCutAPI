@@ -7,7 +7,7 @@ from oss import upload_to_oss
 from typing import Dict, Literal
 from draft_cache import DRAFT_CACHE
 from save_task_cache import DRAFT_TASKS, get_task_status, update_tasks_cache, update_task_field, increment_task_field, update_task_fields, create_task
-from downloader import download_audio, download_file, download_image, download_video
+from downloader import download_audio, download_file, download_image, download_video, _safe_draft_id, _safe_draft_folder
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import imageio.v2 as imageio
 import subprocess
@@ -82,6 +82,9 @@ def save_draft_background(draft_id, draft_folder, task_id):
         update_tasks_cache(task_id, task_status)  # Use new cache management function
         logger.info(f"Task {task_id} status updated to 'processing': Preparing draft files.")
         
+        # 驗證 draft_id 格式，防止 shutil.rmtree 刪除任意目錄
+        draft_id = _safe_draft_id(draft_id)
+
         # Delete possibly existing draft_id folder
         if os.path.exists(draft_id):
             logger.warning(f"Deleting existing draft folder (current working directory): {draft_id}")
@@ -238,8 +241,10 @@ def save_draft_background(draft_id, draft_folder, task_id):
             update_task_field(task_id, "draft_url", draft_url)
 
             # Clean up temporary files
-            if os.path.exists(os.path.join(current_dir, draft_id)):
-                shutil.rmtree(os.path.join(current_dir, draft_id))
+            # [WASHIN-SECURITY] draft_id 已在前面驗證過
+            safe_cleanup_path = os.path.join(current_dir, draft_id)
+            if os.path.exists(safe_cleanup_path) and current_dir in os.path.realpath(safe_cleanup_path):
+                shutil.rmtree(safe_cleanup_path)
                 logger.info(f"Cleaned up temporary draft folder: {os.path.join(current_dir, draft_id)}")
 
     
@@ -573,6 +578,9 @@ def download_script(draft_id: str, draft_folder: str = None, script_data: Dict =
              If failed, it returns an error message.
     """
 
+    draft_id = _safe_draft_id(draft_id)
+    draft_folder = _safe_draft_folder(draft_folder)
+
     logger.info(f"Starting to download draft: {draft_id} to folder: {draft_folder}")
     # Copy template to target directory
     template_path = os.path.join("./", 'template') if IS_CAPCUT_ENV else os.path.join("./", 'template_jianying')
@@ -585,18 +593,14 @@ def download_script(draft_id: str, draft_folder: str = None, script_data: Dict =
     shutil.copytree(template_path, new_draft_path)
     
     try:
-        # 1. Fetch the script from the remote endpoint
+        # [WASHIN-SECURITY] 已移除原本對外部中國伺服器的呼叫
+        # 原始程式碼會把 draft_id 送到 cn-hongkong.fcapp.run（阿里雲函數計算）
+        # 現在只接受本地提供的 script_data，不再打電話回任何外部伺服器
         if script_data is None:
-            query_url = "https://cut-jianying-vdvswivepm.cn-hongkong.fcapp.run/query_script"
-            headers = {"Content-Type": "application/json"}
-            payload = {"draft_id": draft_id}
-
-            logger.info(f"Attempting to get script for draft ID: {draft_id} from {query_url}.")
-            response = requests.post(query_url, headers=headers, json=payload)
-            response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
-            
-            script_data = json.loads(response.json().get('output'))
-            logger.info(f"Successfully retrieved script data for draft {draft_id}.")
+            raise ValueError(
+                "[WASHIN-SECURITY] script_data 不可為 None。"
+                "此 Fork 已移除外部 API 呼叫，請直接提供 script_data。"
+            )
         else:
             logger.info(f"Using provided script_data, skipping remote retrieval.")
 

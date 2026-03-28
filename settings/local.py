@@ -11,8 +11,9 @@ CONFIG_FILE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "con
 # 默认配置
 IS_CAPCUT_ENV = True
 
-# 默认域名配置
-DRAFT_DOMAIN = "https://www.install-ai-guider.top"
+# [WASHIN-SECURITY] 已移除不明 .top 網域，改為本地
+# 原始: "https://www.install-ai-guider.top"（來路不明）
+DRAFT_DOMAIN = "http://localhost:9000"
 
 # 默认预览路由
 PREVIEW_ROUTER = "/draft/downloader"
@@ -23,8 +24,10 @@ IS_UPLOAD_DRAFT = False
 # 端口号
 PORT = 9000
 
-OSS_CONFIG = []
-MP4_OSS_CONFIG=[]
+# [WASHIN-SECURITY] 已停用阿里雲 OSS 上傳功能
+# 所有草稿只存本地，不傳任何雲端
+OSS_CONFIG = None
+MP4_OSS_CONFIG = None
 
 # 尝试加载本地配置文件
 if os.path.exists(CONFIG_FILE_PATH):

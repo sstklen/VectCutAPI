@@ -1,6 +1,7 @@
 import subprocess
 import json
 import time
+from downloader import _validate_url
 
 def get_video_duration(video_url):
     """
@@ -8,6 +9,7 @@ def get_video_duration(video_url):
     :param video_url: Video URL
     :return: Video duration (seconds)
     """
+    video_url = _validate_url(video_url)
     
     # Define retry count and wait time for each retry
     max_retries = 3

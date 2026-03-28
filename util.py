@@ -8,6 +8,13 @@ import functools
 import time
 from settings.local import DRAFT_DOMAIN, PREVIEW_ROUTER, IS_CAPCUT_ENV
 
+
+def safe_getattr(obj, name: str, *default):
+    """getattr 的安全版本：擋掉 dunder 屬性（防洩漏 Python 內部結構）"""
+    if name.startswith('_'):
+        raise ValueError(f"禁止存取私有/dunder 屬性: {name}")
+    return getattr(obj, name, *default)
+
 def hex_to_rgb(hex_color: str) -> tuple:
     """Convert hexadecimal color code to RGB tuple (range 0.0-1.0)"""
     hex_color = hex_color.lstrip('#')

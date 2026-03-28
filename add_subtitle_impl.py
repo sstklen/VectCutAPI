@@ -2,6 +2,7 @@ import pyJianYingDraft as draft
 from util import generate_draft_url, hex_to_rgb
 from create_draft import get_or_create_draft
 from pyJianYingDraft.text_segment import TextBubble, TextEffect
+from downloader import _validate_url
 from typing import Optional
 import requests
 import os
@@ -67,7 +68,11 @@ def add_subtitle_impl(
     
     # Process subtitle content
     srt_content = None
-    
+
+    # [WASHIN-SECURITY] 驗證 URL / 檔案路徑安全性
+    if srt_path.startswith(('http://', 'https://')) or os.path.isfile(srt_path):
+        srt_path = _validate_url(srt_path)
+
     # Check if it's a URL
     if srt_path.startswith(('http://', 'https://')):
         try:

@@ -290,14 +290,54 @@ def convert_text_styles(text_styles_data):
         print(f"[ERROR] Error converting text_styles: {e}", file=sys.stderr)
         return None
 
+# 每個 tool 允許的參數白名單（防止 **arguments 透傳隱藏參數）
+_TOOL_ALLOWED_PARAMS = {
+    "create_draft": {"width", "height"},
+    "add_video": {"video_url", "draft_id", "start", "end", "target_start", "width", "height",
+                  "transform_x", "transform_y", "scale_x", "scale_y", "speed", "track_name",
+                  "volume", "transition", "transition_duration", "mask_type", "background_blur"},
+    "add_audio": {"audio_url", "draft_id", "start", "end", "target_start", "volume", "speed",
+                  "track_name", "width", "height"},
+    "add_image": {"image_url", "draft_id", "start", "end", "width", "height",
+                  "transform_x", "transform_y", "scale_x", "scale_y", "track_name",
+                  "intro_animation", "outro_animation", "transition", "mask_type"},
+    "add_text": {"text", "start", "end", "draft_id", "font_color", "font_size",
+                 "shadow_enabled", "shadow_color", "shadow_alpha", "shadow_angle",
+                 "shadow_distance", "shadow_smoothing", "background_color", "background_alpha",
+                 "background_style", "background_round_radius", "text_styles"},
+    "add_subtitle": {"srt_path", "draft_id", "track_name", "time_offset", "font", "font_size",
+                     "font_color", "bold", "italic", "underline", "border_width", "border_color",
+                     "background_color", "background_alpha", "transform_x", "transform_y",
+                     "width", "height"},
+    "add_effect": {"effect_type", "draft_id", "start", "end", "track_name", "params",
+                   "width", "height"},
+    "add_sticker": {"resource_id", "draft_id", "start", "end", "transform_x", "transform_y",
+                    "scale_x", "scale_y", "alpha", "rotation", "track_name", "width", "height"},
+    "add_video_keyframe": {"draft_id", "track_name", "property_type", "time", "value",
+                           "property_types", "times", "values"},
+    "get_video_duration": {"video_url"},
+    "save_draft": {"draft_id", "draft_folder", "script_data"},
+}
+
+
+def _filter_arguments(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """只保留白名單中的參數，丟掉所有未定義的（防 prompt injection 透傳隱藏參數）"""
+    allowed = _TOOL_ALLOWED_PARAMS.get(tool_name)
+    if allowed is None:
+        return arguments
+    return {k: v for k, v in arguments.items() if k in allowed}
+
+
 def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """执行具体的工具"""
     try:
-        print(f"[DEBUG] Executing tool: {tool_name} with args: {arguments}", file=sys.stderr)
-        
+        # 過濾參數：只保留白名單，防止透傳隱藏參數
+        arguments = _filter_arguments(tool_name, arguments)
+        print(f"[DEBUG] Executing tool: {tool_name} with filtered args: {list(arguments.keys())}", file=sys.stderr)
+
         if not CAPCUT_AVAILABLE:
             return {"success": False, "error": "CapCut modules not available"}
-        
+
         # 捕获标准输出，防止调试信息干扰
         with capture_stdout() as captured:
             if tool_name == "create_draft":
@@ -307,53 +347,52 @@ def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
                 )
                 result = {
                     "draft_id": str(draft_id),
-                    "draft_url": f"https://www.install-ai-guider.top/draft/downloader?draft_id={draft_id}"
+                    "draft_url": f"local://draft/{draft_id}"
                 }
-                
+
             elif tool_name == "add_video":
                 result = add_video_track(**arguments)
-                
+
             elif tool_name == "add_audio":
                 result = add_audio_track(**arguments)
-                
+
             elif tool_name == "add_image":
                 result = add_image_impl(**arguments)
-                
+
             elif tool_name == "add_text":
-                # 处理text_styles参数
                 text_styles_converted = None
                 if "text_styles" in arguments and arguments["text_styles"]:
                     text_styles_converted = convert_text_styles(arguments["text_styles"])
                     arguments["text_styles"] = text_styles_converted
-                
+
                 result = add_text_impl(**arguments)
-                
+
             elif tool_name == "add_subtitle":
                 result = add_subtitle_impl(**arguments)
-                
+
             elif tool_name == "add_effect":
                 result = add_effect_impl(**arguments)
-                
+
             elif tool_name == "add_sticker":
                 result = add_sticker_impl(**arguments)
-                
+
             elif tool_name == "add_video_keyframe":
                 result = add_video_keyframe_impl(**arguments)
-                
+
             elif tool_name == "get_video_duration":
                 duration = get_video_duration(arguments["video_url"])
                 result = {"duration": duration}
-                
+
             elif tool_name == "save_draft":
                 save_result = save_draft_impl(**arguments)
                 if isinstance(save_result, dict) and "draft_url" in save_result:
                     result = {"draft_url": save_result["draft_url"]}
                 else:
-                    result = {"draft_url": f"https://www.install-ai-guider.top/draft/downloader?draft_id=unknown"}
-                
+                    result = {"draft_url": f"local://draft/unknown"}
+
             else:
                 return {"success": False, "error": f"Unknown tool: {tool_name}"}
-        
+
         return {
             "success": True,
             "result": result,
@@ -363,11 +402,12 @@ def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
                 "multi_style": bool(arguments.get("text_styles")) if tool_name == "add_text" else False
             }
         }
-        
+
     except Exception as e:
+        # 詳細錯誤寫 stderr log，回傳給 AI 的只給通用訊息（防路徑洩漏+prompt injection）
         print(f"[ERROR] Tool execution error: {e}", file=sys.stderr)
         print(f"[ERROR] Traceback: {traceback.format_exc()}", file=sys.stderr)
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": f"Tool '{tool_name}' failed. Check server logs."}
 
 def handle_request(request_data: str) -> Optional[str]:
     """处理JSON-RPC请求"""
@@ -438,7 +478,7 @@ def handle_request(request_data: str) -> Optional[str]:
         error_response = {
             "jsonrpc": "2.0",
             "id": None,
-            "error": {"code": 0, "message": str(e)}
+            "error": {"code": -32603, "message": "Internal error. Check server logs."}
         }
         return json.dumps(error_response)
 

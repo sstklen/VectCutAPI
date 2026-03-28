@@ -1,3 +1,4 @@
+import os
 import requests
 from flask import Flask, request, jsonify, Response
 from datetime import datetime
@@ -33,9 +34,27 @@ from util import generate_draft_url as utilgenerate_draft_url, hex_to_rgb
 from pyJianYingDraft.text_segment import TextStyleRange, Text_style, Text_border
 
 from settings.local import IS_CAPCUT_ENV, DRAFT_DOMAIN, PREVIEW_ROUTER, PORT
+from functools import wraps
 
 app = Flask(__name__)
- 
+
+# [WASHIN-SECURITY] 請求大小限制 16MB，防止記憶體耗盡攻擊
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# API Key 認證（設定環境變數 VECTCUT_API_KEY 啟用）
+_API_KEY = os.environ.get('VECTCUT_API_KEY', '')
+
+@app.before_request
+def check_api_key():
+    """所有 POST 請求都要驗證 API Key（GET 查詢類路由不擋）"""
+    if not _API_KEY:
+        return  # 沒設 key = 本地開發模式，不擋
+    if request.method == 'GET':
+        return  # GET 查詢不擋
+    key = request.headers.get('X-API-Key') or request.args.get('api_key')
+    if key != _API_KEY:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
 @app.route('/add_video', methods=['POST'])
 def add_video():
     data = request.get_json()
@@ -1432,4 +1451,6 @@ def get_video_character_effect_types():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT)
+    # [WASHIN-SECURITY] 只綁定本機，不對外暴露
+    # 原始: host='0.0.0.0'（任何人都能呼叫）
+    app.run(host='127.0.0.1', port=PORT, debug=False)
